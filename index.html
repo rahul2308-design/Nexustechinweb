@@ -4,111 +4,197 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NEXUS - Personal AI</title>
+<title>NEXUS AI Assistant</title>
 <style>
-*{box-sizing:border-box}
-body{
-margin:0;
-min-height:100vh;
-background:radial-gradient(circle at center,#102b45,#030712 75%);
-color:#e8faff;
-font-family:Arial,sans-serif;
-display:flex;
-justify-content:center;
-align-items:center;
-text-align:center;
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: radial-gradient(circle at center, #14243c, #050914 70%);
+  color: white;
+  font-family: Arial, sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
 }
-.app{width:100%;max-width:500px;padding:25px}
-h1{
-font-size:48px;
-letter-spacing:9px;
-color:#42e5ff;
-text-shadow:0 0 25px #00bfff;
-margin-bottom:5px;
+.app {
+  width: 100%;
+  max-width: 480px;
+  text-align: center;
 }
-.subtitle{color:#8dbdce;letter-spacing:3px;font-size:12px}
-.orb{
-width:190px;height:190px;
-border:2px solid #38dcff;
-border-radius:50%;
-margin:45px auto 30px;
-display:flex;
-align-items:center;
-justify-content:center;
-box-shadow:0 0 30px #00bfff,inset 0 0 30px #00bfff;
-animation:pulse 2s infinite alternate;
+h1 {
+  letter-spacing: 8px;
+  color: #69d8ff;
 }
-.core{
-width:85px;height:85px;
-border-radius:50%;
-background:#37dfff;
-box-shadow:0 0 35px #00cfff;
+.orb {
+  width: 145px;
+  height: 145px;
+  margin: 35px auto;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ffffff, #42caff 20%, #1765bb 55%, #07152c 75%);
+  box-shadow: 0 0 35px #20aaff, 0 0 85px #087aff;
+  animation: pulse 2.5s infinite alternate;
 }
-@keyframes pulse{
-from{transform:scale(1);opacity:.8}
-to{transform:scale(1.06);opacity:1}
+@keyframes pulse {
+  from { transform: scale(.95); box-shadow: 0 0 25px #20aaff; }
+  to { transform: scale(1.05); box-shadow: 0 0 65px #20aaff; }
 }
-.status{color:#42e5ff;font-size:14px;letter-spacing:2px}
-button{
-background:transparent;
-border:1px solid #38dcff;
-color:#38dcff;
-padding:14px 28px;
-border-radius:30px;
-font-size:16px;
-margin:10px;
+button {
+  border: 1px solid #4bcaff;
+  background: #102b48;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 25px;
+  margin: 6px;
+  cursor: pointer;
+  font-size: 15px;
 }
-input{
-width:90%;
-padding:14px;
-border:1px solid #38dcff;
-border-radius:25px;
-background:#0b1928;
-color:white;
-margin-top:20px;
+button:hover { background: #17639a; }
+.chat {
+  margin-top: 25px;
+  text-align: left;
+  background: #0b1728;
+  border: 1px solid #244563;
+  border-radius: 15px;
+  padding: 15px;
 }
-#reply{color:#c6eaf5;margin-top:20px}
+#messages {
+  min-height: 100px;
+  max-height: 260px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+.entry {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+input {
+  min-width: 0;
+  flex: 1;
+  padding: 13px;
+  border-radius: 20px;
+  border: 1px solid #47718e;
+  background: #07111f;
+  color: white;
+  outline: none;
+}
+#sendBtn { margin: 0; }
+#status {
+  color: #9bdcff;
+  font-size: 13px;
+  margin-top: 12px;
+}
 </style>
 </head>
 <body>
 <div class="app">
-<h1>NEXUS</h1>
-<div class="subtitle">PERSONAL AI ASSISTANT</div>
-<div class="orb"><div class="core"></div></div>
-<div class="status" id="status">SYSTEM ONLINE</div>
-<input id="command" placeholder="Talk to NEXUS...">
-<br>
-<button onclick="activate()">ACTIVATE</button>
-<button onclick="listen()">🎙 SPEAK</button>
-<div id="reply">Hello! I am NEXUS. Your personal assistant.</div>
+  <h1>NEXUS</h1>
+  <p>Your Personal AI Assistant</p>
+
+  <div class="orb"></div>
+
+  <button id="activateBtn">Activate</button>
+  <button id="speakBtn">Speak</button>
+
+  <div class="chat">
+    <div id="messages">Hello! I am Nexus, your personal AI assistant.</div>
+    <div class="entry">
+      <input id="messageInput" type="text"
+        placeholder="Type your message..." />
+      <button id="sendBtn">Send</button>
+    </div>
+    <div id="status">Ready</div>
+  </div>
 </div>
+
 <script>
-function activate(){
-let q=document.getElementById("command").value.trim();
-if(!q){
-document.getElementById("reply").innerText="Hello! How can I help you?";
-return;
+const BACKEND_URL =
+  "https://nexusbackend.sehrawatr955.workers.dev";
+
+const messages = document.getElementById("messages");
+const input = document.getElementById("messageInput");
+const statusText = document.getElementById("status");
+
+function addMessage(who, text) {
+  messages.textContent += "\n\n" + who + ": " + text;
+  messages.scrollTop = messages.scrollHeight;
 }
-document.getElementById("reply").innerText="You said: "+q;
+
+async function sendMessage() {
+  const message = input.value.trim();
+  if (!message) return;
+
+  addMessage("You", message);
+  input.value = "";
+  statusText.textContent = "Nexus is thinking...";
+
+  try {
+    const response = await fetch(BACKEND_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ message: message })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.detail || data.error || "Server error");
+    }
+
+    const reply = data.reply || data.response || data.text;
+
+    if (!reply) {
+      throw new Error("Backend did not return a reply.");
+    }
+
+    addMessage("Nexus", reply);
+    statusText.textContent = "Connected";
+  } catch (error) {
+    addMessage("Nexus", "Connection error: " + error.message);
+    statusText.textContent = "Connection failed";
+  }
 }
-function listen(){
-const Speech=window.SpeechRecognition||window.webkitSpeechRecognition;
-if(!Speech){
-document.getElementById("reply").innerText="Voice recognition is not supported in this browser.";
-return;
-}
-let r=new Speech();
-r.lang="hi-IN";
-r.onstart=()=>document.getElementById("status").innerText="LISTENING...";
-r.onresult=e=>{
-let q=e.results[0][0].transcript;
-document.getElementById("command").value=q;
-document.getElementById("reply").innerText="You said: "+q;
-};
-r.onerror=()=>document.getElementById("status").innerText="VOICE ERROR";
-r.onend=()=>document.getElementById("status").innerText="SYSTEM ONLINE";
-r.start();
-}
+
+document.getElementById("sendBtn")
+  .addEventListener("click", sendMessage);
+
+input.addEventListener("keydown", function(event) {
+  if (event.key === "Enter") sendMessage();
+});
+
+document.getElementById("activateBtn")
+  .addEventListener("click", function() {
+    statusText.textContent = "Nexus is ready. Type or speak.";
+  });
+
+document.getElementById("speakBtn")
+  .addEventListener("click", function() {
+    if (!("webkitSpeechRecognition" in window ||
+          "SpeechRecognition" in window)) {
+      statusText.textContent = "Speech recognition not supported.";
+      return;
+    }
+
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = "hi-IN";
+    recognition.onresult = function(event) {
+      input.value = event.results[0][0].transcript;
+      sendMessage();
+    };
+    recognition.onerror = function() {
+      statusText.textContent = "Voice recognition failed.";
+    };
+    recognition.start();
+    statusText.textContent = "Listening...";
+  });
 </script>
 </body>
 </html>
