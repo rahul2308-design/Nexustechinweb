@@ -1,45 +1,70 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NEXUS AI Assistant</title>
+<title>NEXUS - Personal AI Assistant</title>
+
 <style>
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
+
 body {
   margin: 0;
   min-height: 100vh;
-  background: radial-gradient(circle at center, #14243c, #050914 70%);
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at center, #14243c, #050914 75%);
   color: white;
   font-family: Arial, sans-serif;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 20px;
 }
+
 .app {
   width: 100%;
   max-width: 480px;
   text-align: center;
 }
+
 h1 {
-  letter-spacing: 8px;
   color: #69d8ff;
+  letter-spacing: 8px;
+  font-size: 34px;
 }
+
+.subtitle {
+  color: #a9cce5;
+}
+
 .orb {
   width: 145px;
   height: 145px;
   margin: 35px auto;
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #ffffff, #42caff 20%, #1765bb 55%, #07152c 75%);
+  background: radial-gradient(
+    circle at 35% 30%,
+    #ffffff,
+    #42caff 20%,
+    #1765bb 55%,
+    #07152c 75%
+  );
   box-shadow: 0 0 35px #20aaff, 0 0 85px #087aff;
   animation: pulse 2.5s infinite alternate;
 }
+
 @keyframes pulse {
-  from { transform: scale(.95); box-shadow: 0 0 25px #20aaff; }
-  to { transform: scale(1.05); box-shadow: 0 0 65px #20aaff; }
+  from {
+    transform: scale(.95);
+    box-shadow: 0 0 25px #20aaff;
+  }
+  to {
+    transform: scale(1.05);
+    box-shadow: 0 0 65px #20aaff;
+  }
 }
+
 button {
   border: 1px solid #4bcaff;
   background: #102b48;
@@ -50,7 +75,12 @@ button {
   cursor: pointer;
   font-size: 15px;
 }
-button:hover { background: #17639a; }
+
+button:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}
+
 .chat {
   margin-top: 25px;
   text-align: left;
@@ -59,40 +89,67 @@ button:hover { background: #17639a; }
   border-radius: 15px;
   padding: 15px;
 }
+
 #messages {
   min-height: 100px;
-  max-height: 260px;
+  max-height: 280px;
   overflow-y: auto;
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
   line-height: 1.5;
 }
+
 .entry {
   display: flex;
   gap: 8px;
   margin-top: 12px;
 }
+
 input {
   min-width: 0;
   flex: 1;
   padding: 13px;
   border-radius: 20px;
-  border: 1px solid #47718e;
+  border: 2px solid #39e879;
   background: #07111f;
   color: white;
   outline: none;
+  font-size: 15px;
 }
-#sendBtn { margin: 0; }
+
+input:focus {
+  box-shadow: 0 0 12px #39e879;
+}
+
+#sendBtn {
+  margin: 0;
+  background: #13c957;
+  border: 2px solid #54ff91;
+  color: #04190b;
+  font-weight: bold;
+  box-shadow: 0 0 14px #13c957;
+}
+
+#sendBtn:active,
+#sendBtn.sending {
+  background: #087d34;
+  color: white;
+}
+
 #status {
   color: #9bdcff;
   font-size: 13px;
   margin-top: 12px;
+  min-height: 18px;
 }
 </style>
 </head>
+
 <body>
 <div class="app">
+
   <h1>NEXUS</h1>
-  <p>Your Personal AI Assistant</p>
+  <p class="subtitle">Your Personal AI Assistant</p>
 
   <div class="orb"></div>
 
@@ -100,13 +157,21 @@ input {
   <button id="speakBtn">Speak</button>
 
   <div class="chat">
+
     <div id="messages">Hello! I am Nexus, your personal AI assistant.</div>
+
     <div class="entry">
-      <input id="messageInput" type="text"
-        placeholder="Type your message..." />
-      <button id="sendBtn">Send</button>
+      <input
+        id="messageInput"
+        type="text"
+        placeholder="Type your message..."
+        autocomplete="off"
+      >
+      <button id="sendBtn">SEND</button>
     </div>
+
     <div id="status">Ready</div>
+
   </div>
 </div>
 
@@ -117,6 +182,7 @@ const BACKEND_URL =
 const messages = document.getElementById("messages");
 const input = document.getElementById("messageInput");
 const statusText = document.getElementById("status");
+const sendBtn = document.getElementById("sendBtn");
 
 function addMessage(who, text) {
   messages.textContent += "\n\n" + who + ": " + text;
@@ -125,11 +191,18 @@ function addMessage(who, text) {
 
 async function sendMessage() {
   const message = input.value.trim();
-  if (!message) return;
+
+  if (!message) {
+    statusText.textContent = "Please type a message first.";
+    return;
+  }
 
   addMessage("You", message);
   input.value = "";
+
   statusText.textContent = "Nexus is thinking...";
+  sendBtn.disabled = true;
+  sendBtn.classList.add("sending");
 
   try {
     const response = await fetch(BACKEND_URL, {
@@ -137,64 +210,99 @@ async function sendMessage() {
       headers: {
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({ message: message })
+      body: JSON.stringify({
+        message: message
+      })
     });
 
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.detail || data.error || "Server error");
+      throw new Error(
+        data.detail || data.error || "Server error"
+      );
     }
 
-    const reply = data.reply || data.response || data.text;
+    const reply =
+      data.reply || data.response || data.text;
 
     if (!reply) {
-      throw new Error("Backend did not return a reply.");
+      throw new Error(
+        "Backend did not return a reply."
+      );
     }
 
     addMessage("Nexus", reply);
     statusText.textContent = "Connected";
+
+    if ("speechSynthesis" in window) {
+      const speech = new SpeechSynthesisUtterance(reply);
+      speech.lang = "hi-IN";
+      window.speechSynthesis.speak(speech);
+    }
+
   } catch (error) {
-    addMessage("Nexus", "Connection error: " + error.message);
+    addMessage(
+      "Nexus",
+      "Connection error: " + error.message
+    );
     statusText.textContent = "Connection failed";
+
+  } finally {
+    sendBtn.disabled = false;
+    sendBtn.classList.remove("sending");
   }
 }
 
-document.getElementById("sendBtn")
-  .addEventListener("click", sendMessage);
+sendBtn.addEventListener("click", sendMessage);
 
 input.addEventListener("keydown", function(event) {
-  if (event.key === "Enter") sendMessage();
+  if (event.key === "Enter") {
+    sendMessage();
+  }
 });
 
 document.getElementById("activateBtn")
-  .addEventListener("click", function() {
-    statusText.textContent = "Nexus is ready. Type or speak.";
-  });
+.addEventListener("click", function() {
+  statusText.textContent = "Nexus is ready.";
+});
 
 document.getElementById("speakBtn")
-  .addEventListener("click", function() {
-    if (!("webkitSpeechRecognition" in window ||
-          "SpeechRecognition" in window)) {
-      statusText.textContent = "Speech recognition not supported.";
-      return;
+.addEventListener("click", function() {
+  const SpeechRecognition =
+    window.SpeechRecognition ||
+    window.webkitSpeechRecognition;
+
+  if (!SpeechRecognition) {
+    statusText.textContent =
+      "Voice recognition is not supported in this browser.";
+    return;
+  }
+
+  const recognition = new SpeechRecognition();
+
+  recognition.lang = "hi-IN";
+  recognition.interimResults = false;
+
+  recognition.onresult = function(event) {
+    input.value = event.results[0][0].transcript;
+    sendMessage();
+  };
+
+  recognition.onerror = function() {
+    statusText.textContent = "Voice recognition failed.";
+  };
+
+  recognition.onend = function() {
+    if (statusText.textContent === "Listening...") {
+      statusText.textContent = "Ready";
     }
+  };
 
-    const SpeechRecognition =
-      window.SpeechRecognition || window.webkitSpeechRecognition;
-
-    const recognition = new SpeechRecognition();
-    recognition.lang = "hi-IN";
-    recognition.onresult = function(event) {
-      input.value = event.results[0][0].transcript;
-      sendMessage();
-    };
-    recognition.onerror = function() {
-      statusText.textContent = "Voice recognition failed.";
-    };
-    recognition.start();
-    statusText.textContent = "Listening...";
-  });
+  recognition.start();
+  statusText.textContent = "Listening...";
+});
 </script>
+
 </body>
 </html>
